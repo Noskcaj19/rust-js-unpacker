@@ -1,5 +1,11 @@
 extern crate regex;
 
+pub fn detect(source: &str) -> bool {
+    source
+        .replace(' ', "")
+        .starts_with("eval(function(p,a,c,k,e,")
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
