@@ -1,19 +1,18 @@
 extern crate regex;
 
-use regex::{Regex, RegexBuilder, Captures};
+use regex::{Captures, Regex, RegexBuilder};
 
 fn unbase(base: u8, string: &str) -> u64 {
-    return match base {
-        n @ 2...36 => u64::from_str_radix(string, n as u32).unwrap(),
+    match base {
+        n @ 2..=36 => u64::from_str_radix(string, n as u32).unwrap(),
         _ => unimplemented!(),
-    };
+    }
 }
 
 fn filter_args(source: &str) -> Option<(&str, Vec<&str>, u32, u32)> {
     let regexes = [
-        RegexBuilder::new(
-            r"}\('(.*)', *(\d+), *(\d+), *'(.*)'\.split\('\|'\), *(\d+), *(.*)\)\)",
-        ).dot_matches_new_line(true)
+        RegexBuilder::new(r"}\('(.*)', *(\d+), *(\d+), *'(.*)'\.split\('\|'\), *(\d+), *(.*)\)\)")
+            .dot_matches_new_line(true)
             .build()
             .unwrap(),
         RegexBuilder::new(r"}\('(.*)', *(\d+), *(\d+), *'(.*)'\.split\('\|'\)")
@@ -21,7 +20,7 @@ fn filter_args(source: &str) -> Option<(&str, Vec<&str>, u32, u32)> {
             .build()
             .unwrap(),
     ];
-    for regex in regexes.iter() {
+    if let Some(regex) = regexes.get(0) {
         let args = regex.captures(source).unwrap();
         // There must be a better way im not thinking of
         let arg1 = if let Some(arg) = args.get(1) {
@@ -54,23 +53,19 @@ fn filter_args(source: &str) -> Option<(&str, Vec<&str>, u32, u32)> {
         };
         return Some((arg1, args2, arg3, arg4));
     }
-    return None;
+    None
 }
 
 /// Detects whether `source` is P.A.C.K.E.R. coded.
 pub fn detect(source: &str) -> bool {
-    source.replace(' ', "").starts_with(
-        "eval(function(p,a,c,k,e,",
-    )
+    source
+        .replace(' ', "")
+        .starts_with("eval(function(p,a,c,k,e,")
 }
 
 /// Unpacks P.A.C.K.E.R. packed js code.
 pub fn unpack(source: &str) -> Option<String> {
-    let (payload, symtab, radix, count) = if let Some(args) = filter_args(source) {
-        args
-    } else {
-        return None;
-    };
+    let (payload, symtab, radix, count) = filter_args(source)?;
     if count != symtab.len() as u32 {
         return None;
     }
@@ -82,7 +77,7 @@ pub fn unpack(source: &str) -> Option<String> {
         } else {
             ""
         };
-        let sym = if let Some(sym) = symtab.get(unbase(radix as u8, &cap) as usize) {
+        let sym = if let Some(sym) = symtab.get(unbase(radix as u8, cap) as usize) {
             sym
         } else {
             cap
